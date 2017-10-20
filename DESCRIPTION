@@ -7,4 +7,9 @@ Depends: R (>= 3.4.1)
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
+Imports: 
+  dplyr,
+  sf,
+  here,
+  tigris
 Suggests: testthat

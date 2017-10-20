@@ -1,0 +1,71 @@
+---
+title: "goatscape_pkg_notes"
+author: "Bryan Milstead"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: html_document
+---
+## to do
+* is [goatscape_pkg_notes.rmd] in the correct directory? [inst/extdata/b]?
+* add license to [DESCRIPTION]
+* do we need [tigris] and [here] in [DESCRIPTION] under Imports?
+* the tiger county files are large (~100mb) each.  Should they be put into their own data package?
+
+## Introduction
+
+This .rmd file documents the work process for building the package [goatscape]
+
+### Data Files
+
+* r-script used to create the package data [data-raw/create_pkg_data.r]
+
+
+### [DESCRIPTION] file
+
+* added
+    - LazyData: true
+    - Imports: dplyr, sf, here, tigris
+    - Suggests: testthat
+
+### geoid
+
+* The geoid is a combination of "state fips", "county fips", "tract id", and "block id".  For example: geoid == 440030208003077 corresponds to statefp == 44, countfp == 003, tractce == 020800, and blockce == 3077.
+
+* Note: there can be differences among census years.
+
+### census codes
+
+* Total Population
+    - name == "sf3"; vintage == 2000; vars == "P001001"
+    - name == "sf1"; vintage == 2010; vars == "P0010001"
+    
+    sf1_2010 <- tidycensus::load_variables(2010, "sf1", cache = TRUE)
+    
+sf3_2000 <- tidycensus::load_variables(2000, "sf3", cache = TRUE)
+sf3_1990 <- tidycensus::load_variables(1990, "sf3", cache = TRUE)
+
+View(sf1_2010)
+View(sf3_2000)
+View(sf3_1990)
+
+
+apis <- censusapi::listCensusApis()
+View(apis)
+censusapi::listCensusMetadata(name="sf3", vintage = 1990, type = "geography") #block group
+censusapi::listCensusMetadata(name="sf3", vintage = 2000, type = "geography") #block group
+censusapi::listCensusMetadata(name="sf1", vintage = 2010, type = "geography") #block
+
+a90<-censusapi::getCensus(name= "sf3", vintage = 1990, vars = "POP100", region="block group:*", regionin="state:44+county:009")
+a00<-censusapi::getCensus(name= "sf3", vintage = 2000, vars = "P001001", region="block group:*", regionin="state:44+county:009")
+a10<-censusapi::getCensus(name= "sf1", vintage = 2010, vars = "P0010001", region="block:*", regionin="state:44+county:009")
+
+
+### get_block
+
+* test case.  Run the code below
+
+```{r}
+load(here::here('data/lake.rda'))
+fips<-get_fips(landscape = lake, year=2000, spatial = TRUE)
+
+```
+
