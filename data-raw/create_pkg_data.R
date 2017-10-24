@@ -1,22 +1,29 @@
 #create_pkg_data
 
 
+#create_pkg_data
+
+#counties download for year=1990
+  #Note: this is for the low resolution data.  Use:  counties(resolution = "20m", year = 2000) for high res output.
+county1990low<-tigris::counties(cb=TRUE, year = 1990) #get the data
+county1990low<-sf::st_as_sf(county1990low) #convert to sf object
+county1990low<-sf::st_transform(county1990low, "+init=ESRI:102008") #reproject to North America Albers Equal Area Conic
 
 #counties download for year=2000
-tiger2000_county20m<-tigris::counties(resolution = "20m", year = 2000) #get the data
-tiger2000_county20m<-sf::st_as_sf(tiger2000_county20m) #convert to sf object
-tiger2000_county20m<-sf::st_transform(tiger2000_county20m, "+init=ESRI:102008") #reproject to North America Albers Equal Area Conic (ESRI:102008)
+county2000low<-tigris::counties(cb=TRUE, year = 2000) #get the data
+county2000low<-sf::st_as_sf(county2000low) #convert to sf object
+county2000low<-sf::st_transform(county2000low, "+init=ESRI:102008") #reproject to North America Albers Equal Area Conic
 
 #counties download for year=2010
-tiger2010_county20m<-tigris::counties(resolution = "20m", year = 2010) #get the data
-tiger2010_county20m<-sf::st_as_sf(tiger2010_county20m) #convert to sf object
-tiger2010_county20m<-sf::st_transform(tiger2010_county20m, "+init=ESRI:102008") #reproject to North America Albers Equal Area Conic (ESRI:102008)
+county2010low<-tigris::counties(cb=TRUE, year = 2010) #get the data
+county2010low<-sf::st_as_sf(county2010low) #convert to sf object
+county2010low<-sf::st_transform(county2010low, "+init=ESRI:102008") #reproject to North America Albers Equal Area Conic
+
 
 #compress and save data to /data
-save(tiger2000_county20m, file=here::here('data/tiger2000_county20m.rda'))
-save(tiger2010_county20m, file=here::here('data/tiger2010_county20m.rda'))
-#devtools::use_data(tiger2000_county20m, compress = "bzip2")  #slightly larger than a straight "save"
-#devtools::use_data(tiger2010_county20m, compress = "bzip2")
+save(county1990low, file=here::here('data/county1990low.rda'))
+save(county2000low, file=here::here('data/county2000low.rda'))
+save(county2010low, file=here::here('data/county2010low.rda'))
 
 
 
@@ -40,5 +47,9 @@ lake2<-sf::st_as_sf(dplyr::filter(lake2, SITEID=='NLA06608-TX:14'))
 devtools::use_data(lake, compress = "bzip2")
 devtools::use_data(lake1, compress = "bzip2")
 devtools::use_data(lake2, compress = "bzip2")
+
+
+#  polygon out of range (in canada)
+pol<-sf::st_read('C:/bryan/bryan_temp/tempPoly.kml')
 
 

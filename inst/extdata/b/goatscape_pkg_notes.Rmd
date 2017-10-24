@@ -9,6 +9,7 @@ output: html_document
 * add license to [DESCRIPTION]
 * do we need [tigris] and [here] in [DESCRIPTION] under Imports?
 * the tiger county files are large (~100mb) each.  Should they be put into their own data package?
+* add support for other input formats; shp? sp?
 
 ## Introduction
 
@@ -58,8 +59,17 @@ a90<-censusapi::getCensus(name= "sf3", vintage = 1990, vars = "POP100", region="
 a00<-censusapi::getCensus(name= "sf3", vintage = 2000, vars = "P001001", region="block group:*", regionin="state:44+county:009")
 a10<-censusapi::getCensus(name= "sf1", vintage = 2010, vars = "P0010001", region="block:*", regionin="state:44+county:009")
 
+View(censusapi::listCensusMetadata(name="sf3", vintage = 1990, type = "variables"))
+View(censusapi::listCensusMetadata(name="sf3", vintage = 2000, type = "variables"))
+View(censusapi::listCensusMetadata(name="sf1", vintage = 2010, type = "variables"))
 
-### get_block
+
+### get_fips
+* to get the census data we need the state and county fips codes
+* the [tigris] package allows us to download the tiger files for line work for each year.  Linework available in two resolutions
+    - low resolution generalized (1:500k); Code: counties(cb=FALSE, year = 2010)
+    - high resolution Tiger files; Code: counties(cb=FALSE, year = 2010)
+        - NOTE: for cb = false there should be files availabe at 5m and 20m resolution; both options return the same file.
 
 * test case.  Run the code below
 
