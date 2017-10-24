@@ -50,6 +50,6 @@ devtools::use_data(lake2, compress = "bzip2")
 
 
 #  polygon out of range (in canada)
-pol<-sf::st_read('C:/bryan/bryan_temp/tempPoly.kml')
+canada<-sf::st_read('C:/bryan/bryan_temp/tempPoly.kml')
 
 
