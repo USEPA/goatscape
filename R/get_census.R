@@ -4,17 +4,22 @@
 #' [sf] polygon and returns the total population for that area for a given USA decadal census.
 #' The input polygon must be projected and must overlap a USA census area
 #' Data are returned for years 2000, or 2010; The default is 2010
+#' For 2000 only the census block group data are available.  For 2010 the block level information
+#' is available but can take a long time to download for larger polygons.  By default the function
+#' downloads the block group level for 2010 but you can request the more detailed block data.
 #'
 #' @param landscape A spatial polygon of class "sf" (see package [sf]). Note: the object must be projected (i.e. has a coordinate reference system and must overlap a USA census area)
 #' @param year Which census year do you want to use? In format YYYY.  Currently the package supports census years 2000, and 2010.
 #' @param spatial keep the spatial data? Default = FALSE
-#' @param api_key #Your Census API key. Obtain one at http://api.census.gov/data/key_signup.html
+#' @param level for 2000 level == "block_group" for 2010 choose level = "block" or level = "block_group"
+#' @param api_key Your Census API key. Obtain one at http://api.census.gov/data/key_signup.html
+#' @param delete_zips Important:  if set to TRUE all zip files in the working directory will be deleted. Each time you run get_census one or more zip files will be added to your working directory.  After processing these can be deleted.  The default is delete_zips=FALSE.  If you are unsure about this don't change it.
 #'
 #' @export
 #' @examples
 #' get_census()
-get_census <- function(landscape, year = 2010, spatial = FALSE,
-                     api_key = Sys.getenv("CENSUS_API_KEY")){
+get_census<-function(landscape, year = 2010, spatial = FALSE, level = "block_group",
+                     api_key = Sys.getenv("CENSUS_API_KEY"), delete_zips = FALSE){
 
 # check for census api key (modified from tidycensus::get_decennial)
   if (Sys.getenv("CENSUS_API_KEY") != "") {
@@ -23,6 +28,9 @@ get_census <- function(landscape, year = 2010, spatial = FALSE,
     stop("A Census API key is required.  Obtain one at http://api.census.gov/data/key_signup.html.")
   }
   
+# check that level = "block_group" for year == 2000
+  if (year==2000 & level == "block") stop("Block level data not available for 2000 use: level = 'block_group'")
+    
 #check that landscape is an sf object
   if (class(landscape)[1] != "sf") stop("The landscape input must be an [sf] object")
   
@@ -68,20 +76,20 @@ get_census <- function(landscape, year = 2010, spatial = FALSE,
 #create fips string for get_census
   fips$regionin<-paste("state:", fips$state, "+county:", fips$county, sep = "")
   
-#set up censusapi and tigris::blocks calls
+#set up censusapi and tigris calls
   if(year == 2000) {
       name<-"sf3"
       vars<-"P001001"
-      region<-"block group:*"
-      func<-tigris::block_groups
-      cb<-FALSE  #download the detailed block_groups
-  } else {
+  }
+  
+  if(year == 2010) {    
       name<-"sf1"
       vars<-"P0010001"
-      region<-"block:*"
-      func<-tigris::blocks
-      cb<-FALSE  #download the detailed blocks
   }
+
+  if(level == "block") region <- "block:*"
+  
+  if(level == "block_group") region <- "block group:*"
   
 #get the census data for total pop
   pop<-list()
@@ -100,15 +108,25 @@ get_census <- function(landscape, year = 2010, spatial = FALSE,
     blk<-list()
     for(i in c(1:nrow(fips))){
       blk[[i]]<-sf::st_as_sf(tigris::block_groups(state = as.numeric(fips$state[i]), 
-                                                  county = as.numeric(fips$county[i]), 
-                                                  year = year, cb = FALSE))
+                                                  county = as.numeric(fips$county[i]),year = year))
       blk[[i]]<-dplyr::select(blk[[i]], state = STATEFP, county = COUNTYFP, tract = TRACTCE00, block.group = BLKGRPCE00, 
                               area_land = ALAND00, area_water = AWATER00, geometry)
     }
   } 
   
-  #year = 2010
-  if(year == 2010) {
+#year == 2010 & level == 'block_group'
+  if(year == 2010 & level == 'block_group') {
+    blk<-list()
+    for(i in c(1:nrow(fips))){
+      blk[[i]]<-sf::st_as_sf(tigris::block_groups(state = as.numeric(fips$state[i]), 
+                                                  county = as.numeric(fips$county[i]), year = year))
+      blk[[i]]<-dplyr::select(blk[[i]], state = STATEFP, county = COUNTYFP, tract = TRACTCE10, block.group = BLKGRPCE10, 
+                              area_land = ALAND10, area_water = AWATER10, geometry)
+    }
+  } 
+
+#year == 2010 & level == 'block'
+  if(year == 2010 & level == 'block') {
     blk<-list()
     for(i in c(1:nrow(fips))){
       blk[[i]]<-sf::st_as_sf(tigris::blocks(state = as.numeric(fips$state[i]), 
@@ -116,8 +134,8 @@ get_census <- function(landscape, year = 2010, spatial = FALSE,
       blk[[i]]<-dplyr::select(blk[[i]], state = STATEFP, county = COUNTYFP, tract = TRACTCE10, block = BLOCKCE10, 
                               area_land = ALAND10, area_water = AWATER10, geometry)
     }
-  } 
-
+  }
+  
 #rbind the blk
   blocks<-blk[[1]]
     if(length(blk)>1) for(i in c(2:length(blk))) blocks<-rbind(blocks,blk[[i]])
@@ -164,20 +182,24 @@ get_census <- function(landscape, year = 2010, spatial = FALSE,
     out$census_data<-as.data.frame(int)
   }
   
-#calc total pop
-  out$total_population<-round(sum(int$pro_pop), 2)
+#calc estimated pop for the input landscape
+  out$est_population<-round(sum(int$pro_pop), 2)
   
 #calc input area in m2
   out$input_area_km2<-round(as.numeric(sf::st_area(landscape) / 1000000), 2)
   
 #calc pop density
-  out$pop_per_km2<-round(out$total_population / out$input_area_km2, 1)
+  out$est_pop_per_km2<-round(out$est_population / out$input_area_km2, 1)
   
 #percent overlap between input landscape and census area
   out$percent_overlap<-round(sum(int$int_area) / as.numeric(sf::st_area(landscape)) * 100, 1)
   
 #add overlap warning
   if(out$percent_overlap !=100) out$warning<-"percent_overlap not equal 100%; input landscape partially outside USA census boundaries"
+  
+#remove the zip files containing the census linework from the working directory
+  junk <- dir(pattern=".zip") # select the  zip files in the working directory:
+  if(delete_zips == TRUE) file.remove(junk) # send them to oblivion
   
 #return the output
   return(out)
@@ -189,7 +211,6 @@ get_census <- function(landscape, year = 2010, spatial = FALSE,
 
 #to do
 
-#can the zip files be automatically deleted?
 #how can the output be formatted for summary and for hiding the detailed data?
 # add examples and metadata
     
