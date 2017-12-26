@@ -16,6 +16,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 This .rmd file documents the work process for building the package [goatscape]
 
+## installation
+library("devtools")
+install_github("usepa/goatscape")
+library("goatscape")
+
 ## get_census
 
 ### Data Files
