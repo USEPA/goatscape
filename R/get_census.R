@@ -7,19 +7,19 @@
 #' For 2000 only the census block group data are available.  For 2010 the block level information
 #' is available but can take a long time to download for larger polygons.  By default the function
 #' downloads the block group level for 2010 but you can request the more detailed block data.
+#' NOTE: highly recommended that you load the [tigris] package and set [options(tigris_use_cache = TRUE)]
 #'
 #' @param landscape A spatial polygon of class "sf" (see package [sf]). Note: the object must be projected (i.e. has a coordinate reference system and must overlap a USA census area)
 #' @param year Which census year do you want to use? In format YYYY.  Currently the package supports census years 2000, and 2010.
-#' @param spatial keep the spatial data? Default = FALSE
+#' @param spatial keep the spatial data? Default = TRUE
 #' @param level for 2000 level == "block_group" for 2010 choose level = "block" or level = "block_group"
 #' @param api_key Your Census API key. Obtain one at http://api.census.gov/data/key_signup.html
-#' @param delete_zips Important:  if set to TRUE all zip files in the working directory will be deleted. Each time you run get_census one or more zip files will be added to your working directory.  After processing these can be deleted.  The default is delete_zips=FALSE.  If you are unsure about this don't change it.
 #'
 #' @export
 #' @examples
 #' get_census()
-get_census<-function(landscape, year = 2010, spatial = FALSE, level = "block_group",
-                     api_key = Sys.getenv("CENSUS_API_KEY"), delete_zips = FALSE){
+get_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_group",
+                     api_key = Sys.getenv("CENSUS_API_KEY")){
 
 # check for census api key (modified from tidycensus::get_decennial)
   if (Sys.getenv("CENSUS_API_KEY") != "") {
@@ -42,15 +42,15 @@ get_census<-function(landscape, year = 2010, spatial = FALSE, level = "block_gro
   # reproject county to Albers
   if(year == 2000) {
     if(!exists("county2000low")) {
-      cty<-tigris::counties(cb=TRUE, year = 2000) 
-      cty<-sf::st_transform(sf::st_as_sf(cty), "+init=ESRI:102008")
+      cty<-tigris::counties(cb=TRUE, year = 2000, class = 'sf') 
+      cty<-sf::st_transform(cty, "+init=ESRI:102008")
       assign("county2000low", cty, envir=globalenv())
     }
     county<-county2000low
   } else if(year == 2010) {
     if(!exists("county2010low")) {
-      cty<-tigris::counties(cb=TRUE, year = 2010) 
-      cty<-sf::st_transform(sf::st_as_sf(cty), "+init=ESRI:102008")
+      cty<-tigris::counties(cb=TRUE, year = 2010, class = 'sf') 
+      cty<-sf::st_transform(cty, "+init=ESRI:102008")
       assign("county2010low", cty, envir=globalenv())
     }
     county<-county2010low
@@ -107,8 +107,9 @@ get_census<-function(landscape, year = 2010, spatial = FALSE, level = "block_gro
   if(year == 2000) {
     blk<-list()
     for(i in c(1:nrow(fips))){
-      blk[[i]]<-sf::st_as_sf(tigris::block_groups(state = as.numeric(fips$state[i]), 
-                                                  county = as.numeric(fips$county[i]),year = year))
+      blk[[i]]<-tigris::block_groups(state = as.numeric(fips$state[i]), 
+                                                  county = as.numeric(fips$county[i]),year = year, 
+                                                  class='sf')
       blk[[i]]<-dplyr::select(blk[[i]], state = STATEFP, county = COUNTYFP, tract = TRACTCE00, block.group = BLKGRPCE00, 
                               area_land = ALAND00, area_water = AWATER00, geometry)
     }
@@ -118,8 +119,9 @@ get_census<-function(landscape, year = 2010, spatial = FALSE, level = "block_gro
   if(year == 2010 & level == 'block_group') {
     blk<-list()
     for(i in c(1:nrow(fips))){
-      blk[[i]]<-sf::st_as_sf(tigris::block_groups(state = as.numeric(fips$state[i]), 
-                                                  county = as.numeric(fips$county[i]), year = year))
+      blk[[i]]<-tigris::block_groups(state = as.numeric(fips$state[i]), 
+                                     county = as.numeric(fips$county[i]), year = year, 
+                                     class='sf')
       blk[[i]]<-dplyr::select(blk[[i]], state = STATEFP, county = COUNTYFP, tract = TRACTCE10, block.group = BLKGRPCE10, 
                               area_land = ALAND10, area_water = AWATER10, geometry)
     }
@@ -129,8 +131,9 @@ get_census<-function(landscape, year = 2010, spatial = FALSE, level = "block_gro
   if(year == 2010 & level == 'block') {
     blk<-list()
     for(i in c(1:nrow(fips))){
-      blk[[i]]<-sf::st_as_sf(tigris::blocks(state = as.numeric(fips$state[i]), 
-                                                  county = as.numeric(fips$county[i]), year = year))
+      blk[[i]]<-tigris::blocks(state = as.numeric(fips$state[i]), 
+                                            county = as.numeric(fips$county[i]), year = year, 
+                                            class='sf')
       blk[[i]]<-dplyr::select(blk[[i]], state = STATEFP, county = COUNTYFP, tract = TRACTCE10, block = BLOCKCE10, 
                               area_land = ALAND10, area_water = AWATER10, geometry)
     }
@@ -196,10 +199,6 @@ get_census<-function(landscape, year = 2010, spatial = FALSE, level = "block_gro
   
 #add overlap warning
   if(out$percent_overlap !=100) out$warning<-"percent_overlap not equal 100%; input landscape partially outside USA census boundaries"
-  
-#remove the zip files containing the census linework from the working directory
-  junk <- dir(pattern=".zip") # select the  zip files in the working directory:
-  if(delete_zips == TRUE) file.remove(junk) # send them to oblivion
   
 #return the output
   return(out)
