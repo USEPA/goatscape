@@ -1,4 +1,4 @@
-#' get_census
+#' gs_census
 #'
 #' This function takes an input landscape, a user-defined land area as an
 #' [sf] polygon and returns the total population for that area for a given USA decadal census.
@@ -17,8 +17,8 @@
 #'
 #' @export
 #' @examples
-#' get_census()
-get_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_group",
+#' gs_census()
+gs_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_group",
                      api_key = Sys.getenv("CENSUS_API_KEY")){
 
 # check for census api key (modified from tidycensus::get_decennial)
@@ -36,6 +36,10 @@ get_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_grou
   
 #check that the landscape is projected
   if(is.na(sf::st_crs(landscape)$epsg) | is.na(sf::st_crs(landscape)$proj4string)) stop("The landscape object is not projected; check [st_crs]")
+
+# define albers projection to use for analysis
+  crs_alb<-"+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 
+                +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
   
 # check year year == 2000 or year == 2010
   # load the tiger spatial data for counties
@@ -43,14 +47,14 @@ get_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_grou
   if(year == 2000) {
     if(!exists("county2000low")) {
       cty<-tigris::counties(cb=TRUE, year = 2000, class = 'sf') 
-      cty<-sf::st_transform(cty, "+init=ESRI:102008")
+      cty<-sf::st_transform(cty, crs_alb)
       assign("county2000low", cty, envir=globalenv())
     }
     county<-county2000low
   } else if(year == 2010) {
     if(!exists("county2010low")) {
       cty<-tigris::counties(cb=TRUE, year = 2010, class = 'sf') 
-      cty<-sf::st_transform(cty, "+init=ESRI:102008")
+      cty<-sf::st_transform(cty, crs_alb)
       assign("county2010low", cty, envir=globalenv())
     }
     county<-county2010low
@@ -62,7 +66,7 @@ get_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_grou
   input_crs<-sf::st_crs(landscape)
   
 #reproject input landscape to albers (even if already in albers: just as fast)
-  landscape<-sf::st_transform(landscape, "+init=ESRI:102008") #reproject to North America Albers Equal Area Conic (ESRI:102008)
+  landscape<-sf::st_transform(landscape, crs_alb) #reproject to the Albers Equal Area Conic projection used by NLCD
   
 #get counties that landscape intersects
   fips<-as.data.frame(dplyr::slice(county, unlist(sf::st_intersects(landscape, county))))
@@ -73,7 +77,7 @@ get_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_grou
 #rename fields
   fips<-dplyr::select(fips, state = STATE, county = COUNTY) 
 
-#create fips string for get_census
+#create fips string for gs_census
   fips$regionin<-paste("state:", fips$state, "+county:", fips$county, sep = "")
   
 #set up censusapi and tigris calls
@@ -151,7 +155,7 @@ get_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_grou
   blocks<-merge(blocks, tot_pop, by=names(blocks)[1:4], all.x=TRUE)
   
 #reproject blocks
-  blocks<-sf::st_transform(blocks,"+init=ESRI:102008")
+  blocks<-sf::st_transform(blocks, crs_alb)
     
 #calc area of blocks-add to attributes
   blocks$blk_area<-as.numeric(sf::st_area(blocks))
@@ -205,7 +209,7 @@ get_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_grou
 }
 
 
-#test<-get_census(lake, 2000, TRUE) 
+#test<-gs_census(lake, 2000, TRUE) 
 
 
 #to do
