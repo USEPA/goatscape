@@ -31,8 +31,8 @@ get_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_grou
 # check that level = "block_group" for year == 2000
   if (year==2000 & level == "block") stop("Block level data not available for 2000 use: level = 'block_group'")
     
-#check that landscape is an sf object
-  if (class(landscape)[1] != "sf") stop("The landscape input must be an [sf] object")
+#check that landscape is an sf polygon object
+  if (class(landscape)[1] != 'sf') stop("The landscape input must be an [sf] polygon object")
   
 #check that the landscape is projected
   if(is.na(sf::st_crs(landscape)$epsg) | is.na(sf::st_crs(landscape)$proj4string)) stop("The landscape object is not projected; check [st_crs]")
