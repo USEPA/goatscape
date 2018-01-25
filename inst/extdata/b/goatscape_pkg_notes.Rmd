@@ -21,7 +21,7 @@ library("devtools")
 install_github("usepa/goatscape")
 library("goatscape")
 
-## get_census
+## gs_census
 
 ### Data Files
 * r-script used to create the package data [data-raw/create_pkg_data.r]
@@ -31,10 +31,71 @@ library("goatscape")
 
 * Note: there can be differences among census years.
 
+```{r}
+# https://cran.r-project.org/web/packages/censusapi/vignettes/getting-started.html
+View(censusapi::listCensusApis())
+sf1_2000 <- censusapi::listCensusMetadata(name="sf1", vintage = 2000, type = "variables")
+  View(sf1_2000)  # filter; concept == "Total Population"; "P001001"
+  
+sf3_2000 <- censusapi::listCensusMetadata(name="sf3", vintage = 2000, type = "variables")
+  View(sf3_2000)  # filter; concept == "Total Population"; "P001001"
+
+sf1_2010 <- censusapi::listCensusMetadata(name="sf1", vintage = 2010, type = "variables")
+  View(sf1_2010)  # filter; concept == "Total Population"; "P0010001"  
+```
+
 ### census codes
+
+```{r codes}
+# https://cran.r-project.org/web/packages/censusapi/vignettes/getting-started.html
+View(censusapi::listCensusApis())
+sf1_2000 <- censusapi::listCensusMetadata(name="sf1", vintage = 2000, type = "variables")
+  View(sf1_2000)  # filter; concept == "Total Population"; "P001001"
+  
+sf3_2000 <- censusapi::listCensusMetadata(name="sf3", vintage = 2000, type = "variables")
+  View(sf3_2000)  # filter; concept == "Total Population"; "P001001"
+
+sf1_2010 <- censusapi::listCensusMetadata(name="sf1", vintage = 2010, type = "variables")
+  View(sf1_2010)  # filter; concept == "Total Population"; "P0010001"  
+```
+
 * Total Population
+    - name == "sf1"; vintage == 2000; vars == "P001001"
     - name == "sf3"; vintage == 2000; vars == "P001001"
     - name == "sf1"; vintage == 2010; vars == "P0010001"
+    
+* Use "sf1" for both years
+    - [SF 1 gives exact numbers even for very small groups and areas, whereas SF 3 gives estimates for small groups and areas such as tracts and small places that are less exact. The goal of SF 3 is to identify large differences among areas or large changes over time. Estimates for small areas and small population groups often do exhibit large changes from one census to the next, so having the capability to measure them is worthwhile.](https://www.census.gov/census2000/sf3compnote.html)
+
+* [census.gov](https://factfinder.census.gov) has a gui to get these data also.  It can be tricky to find what you want.  
+* NOTE: use internet explorer; didn't work with Chrome.
+* Here are the steps to dowload the census data tables:
+    - [Advance Search]
+    - [Show Me All]
+    - [Topics] (left side bar)
+    - [+ People] [+ Basic Count/Estimate] [+ Population Total] [+ Year] [select 2000/2010] [Close]
+    - from here you can search for the table you want or better search [sf1] in the "refine you search results: topic or table name" at top of table list.  It will give you some choices.  Pick the right one (YEAR SF1 100% Data) then select [go] 
+    - click box for [P1 Total Population YEAR SF1 100% Data]
+    - select [download] and follow instructions in the popups
+    
+* Here are the steps to dowload the census spatial data:
+    - [Advance Search]
+    - [Show Me All]
+    - [Geographies] (left side bar) 
+    - [Map tab] center panel
+    - [seach for a city near your lake] center panel
+    - [more geography types] radio button right side center panel
+    - click drop down arrow for "select a geographic type"
+    - [Block Group] from drop down
+    - Find lake and zoom in to see block groups (may need to select from drop down again)
+    - use select tools to pick the block groups.
+    - Important:  click [add to your selection] in the "select geographies" toolbar
+    - choose [download] from toolbar (on the right?)
+    - [Shapefiles] radio button [ok]
+    
+    
+    
+    - sort through center panel table and select [P1; TOTAL POPULATION; YEAR SF1 100% Data]
     
 ## get_nlcd
 * NLCD website: http://www.mrlc.gov/index.php

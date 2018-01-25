@@ -35,11 +35,14 @@ gs_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_group
   if (class(landscape)[1] != 'sf') stop("The landscape input must be an [sf] polygon object")
   
 #check that the landscape is projected
-  if(is.na(sf::st_crs(landscape)$epsg) | is.na(sf::st_crs(landscape)$proj4string)) stop("The landscape object is not projected; check [st_crs]")
+  if(is.na(sf::st_crs(landscape)$epsg) & is.na(sf::st_crs(landscape)$proj4string)) stop("The landscape object is not projected; check [st_crs]")
 
 # define albers projection to use for analysis
-  crs_alb<-"+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 
-                +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+  # crs_alb<-"+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 
+  #               +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+  
+# the old crs
+  crs_alb<-"+init=ESRI:102008"
   
 # check year year == 2000 or year == 2010
   # load the tiger spatial data for counties
@@ -82,7 +85,7 @@ gs_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_group
   
 #set up censusapi and tigris calls
   if(year == 2000) {
-      name<-"sf3"
+      name<-"sf1"
       vars<-"P001001"
   }
   
@@ -172,18 +175,13 @@ gs_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_group
 #calc proportional population by block/block_group
   int$pro_pop<-round(int$tot_pop * int$pro_blk, 2)
   
-#calc proportion of original landscape included in intersection
-  #note: landscapes that cross international borders or have missing data will have pro_ls < 1
-  int$pro_ls<-round(sum(int$int_area) / as.numeric(sf::st_area(landscape)), 2)
-  
-#add warning if int$pro_ls < 1
-  if(round(sum(int$int_area) / as.numeric(sf::st_area(landscape)), 2) !=1) warning('Input landscape area not equal to output intersected census area; input landscape partially outside USA census boundaries')
-  
 #prepare output list
   out<-list()
   
 #if spatial = TRUE transform intersection to input_crs and add
   if(spatial) {
+    out$landscape<-sf::st_transform(landscape, input_crs)
+    out$census_raw<-sf::st_transform(blocks, input_crs)
     out$census_data<-sf::st_transform(int, input_crs)
   } else {
     out$census_data<-as.data.frame(int)
@@ -202,9 +200,12 @@ gs_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_group
   out$percent_overlap<-round(sum(int$int_area) / as.numeric(sf::st_area(landscape)) * 100, 1)
   
 #add overlap warning
-  if(out$percent_overlap !=100) out$warning<-"percent_overlap not equal 100%; input landscape partially outside USA census boundaries"
-  
-#return the output
+  if(out$percent_overlap !=100) {
+    out$warning<-"percent_overlap not equal 100%; input landscape partially outside USA census boundaries" 
+    warning('percent_overlap not equal 100%; input landscape partially outside USA census boundaries')
+  } 
+
+  #return the output
   return(out)
 }
 

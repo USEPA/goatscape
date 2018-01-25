@@ -26,24 +26,18 @@
 
 ##############NLCD
 # get Jeff's NLCD lookup table 
-nlcd_info<-read.csv(url('https://raw.githubusercontent.com/jhollist/miscPackage/master/inst/extdata/nlcd_lookup.csv'),
+nlcd_landuse_info<-read.csv(url('https://raw.githubusercontent.com/jhollist/miscPackage/master/inst/extdata/nlcd_lookup.csv'),
                     stringsAsFactors = FALSE)
-nlcd_info<-dplyr::rename(nlcd_info, description = label)
-devtools::use_data(nlcd_info, compress = "bzip2", overwrite = TRUE)
+nlcd_landuse_info<-dplyr::rename(nlcd_landuse_info, description = label, value = code) 
+nlcd_landuse_info$hex <- nlcd@legend@colortable[nlcd_landuse_info$value+1] #use [gs_nlcd] to download raster "nlcd"
+devtools::use_data(nlcd_landuse_info, compress = "bzip2", overwrite = TRUE)
 
-#add colors 1:256 for NLCD raster
-nlcd_colors <- rep("#000000", 256) #template
-nlcd_colors[nlcd_info$code + 1] <- nlcd_info$hex        #add colors for NCLD codes
-devtools::use_data(nlcd_colors, compress = "bzip2", overwrite = TRUE)
+# #add colors 1:256 for nlcd_landuse raster:  Note: not necessary-colortable already loaded in NLCD slot
+# nlcd_landuse_colors <- rep("#000000", 256) #template
+# nlcd_landuse_colors[nlcd_landuse_info$code + 1] <- nlcd_landuse_info$hex        #add colors for NCLD codes
+# devtools::use_data(nlcd_landuse_colors, compress = "bzip2", overwrite = TRUE)
 
-#update non-NULL colors
-# slotNames(nlcd)
-# slotNames(nlcd@legend)
-load(here::here('data/nlcd_colors.rda'))
-load(here::here('data/nlcd_info.rda'))
-nlcd@legend@values <- nlcd_info$code  
-nlcd@legend@colortable <- nlcd_colors
-nlcd@legend@names <- nlcd_info$label
+#####################
 
 # save the NLCD crs
 crs_alb<-"+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"

@@ -1,2 +1,6 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+create_pkg_data
+temp
+RAW
+EXTRACTIONS
