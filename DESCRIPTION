@@ -1,10 +1,14 @@
 Package: goatscape
-Title: What the Package Does (one line, title case)
+Title: Download and Clip Landscape Level Data to a User Defined Polygon
 Version: 0.0.0.9000
-Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Authors@R: c(
+    person("Jeff", "Hollister", email = "hollister.jeff@epa.gov", role = "cre"),
+    person("Bryan", "Milstead", email = "milstead.bryan@epa.gov", role = "aut"))
+Description: This package is designed to download landscape level information (e.g., census, National Land
+    Cover Dataeset etc.), clip it to a user defined polygon input (sf object) and then to tabulate the landscape information
+    for the area of interest.  Spatial and tabular data are returned.
 Depends: R (>= 3.0.0)
-License: What license is it under?
+License: CC0
 Encoding: UTF-8
 LazyData: true
 Imports: 

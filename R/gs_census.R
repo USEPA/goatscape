@@ -9,15 +9,21 @@
 #' downloads the block group level for 2010 but you can request the more detailed block data.
 #' NOTE: highly recommended that you load the [tigris] package and set [options(tigris_use_cache = TRUE)]
 #'
-#' @param landscape A spatial polygon of class "sf" (see package [sf]). Note: the object must be projected (i.e. has a coordinate reference system and must overlap a USA census area)
-#' @param year Which census year do you want to use? In format YYYY.  Currently the package supports census years 2000, and 2010.
+#' @param landscape A spatial polygon of class "sf" (see package [sf]). Note: the object must be projected (i.e. has a coordinate reference system) and must overlap a USA census area.
+#' @param year Which census year do you want to use? In format YYYY.  Currently the package supports census years 2000, 
+#' and 2010 (default).
 #' @param spatial keep the spatial data? Default = TRUE
-#' @param level for 2000 level == "block_group" for 2010 choose level = "block" or level = "block_group"
-#' @param api_key Your Census API key. Obtain one at http://api.census.gov/data/key_signup.html
+#' @param level Choose the census reporting level: "block_group" (default) or "block".  NOTE: for year = 2000 only 
+#' "block_group" level is available; Both levels available for year = 2010. 
+#' @param api_key Your Census API key. Obtain one at http://api.census.gov/data/key_signup.html; For more information see: https://hrecht.github.io/censusapi/index.html#api-key-setup.
 #'
 #' @export
 #' @examples
-#' gs_census()
+#' # NOTE: this function requires a Census API key. Obtain one at http://api.census.gov/data/key_signup.html
+#' # For more information see: https://hrecht.github.io/censusapi/index.html#api-key-setup
+#' 
+#' gs_census(buf20, year = 2010, spatial = TRUE, level = "block_group")
+
 gs_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_group",
                      api_key = Sys.getenv("CENSUS_API_KEY")){
 
@@ -25,7 +31,8 @@ gs_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_group
   if (Sys.getenv("CENSUS_API_KEY") != "") {
     api_key<-Sys.getenv("CENSUS_API_KEY")
   } else if (is.null(api_key)) {
-    stop("A Census API key is required.  Obtain one at http://api.census.gov/data/key_signup.html.")
+    stop("A Census API key is required.  Obtain one at http://api.census.gov/data/key_signup.html. 
+         For more information see: https://hrecht.github.io/censusapi/index.html#api-key-setup")
   }
   
 # check that level = "block_group" for year == 2000
@@ -37,13 +44,6 @@ gs_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_group
 #check that the landscape is projected
   if(is.na(sf::st_crs(landscape)$epsg) & is.na(sf::st_crs(landscape)$proj4string)) stop("The landscape object is not projected; check [st_crs]")
 
-# define albers projection to use for analysis
-  # crs_alb<-"+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 
-  #               +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
-  
-# the old crs
-  crs_alb<-"+init=ESRI:102008"
-  
 # check year year == 2000 or year == 2010
   # load the tiger spatial data for counties
   # reproject county to Albers
@@ -210,13 +210,7 @@ gs_census<-function(landscape, year = 2010, spatial = TRUE, level = "block_group
 }
 
 
-#test<-gs_census(lake, 2000, TRUE) 
 
-
-#to do
-
-#how can the output be formatted for summary and for hiding the detailed data?
-# add examples and metadata
     
     
  
