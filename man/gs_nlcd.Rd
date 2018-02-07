@@ -4,18 +4,18 @@
 \alias{gs_nlcd}
 \title{gs_nlcd}
 \usage{
-gs_nlcd(landscape, spatial = TRUE, label, year = 2011,
-  dataset = "landcover", raw.dir = "./RAW/NLCD",
-  extraction.dir = paste0("./EXTRACTIONS/", "/NLCD"),
+gs_nlcd(landscape, spatial = TRUE, label = NA, year = 2011,
+  dataset = "landcover", raw.dir = "./nlcd_data/raw",
+  extraction.dir = "./nlcd_data/clipped",
   raster.options = c("COMPRESS=DEFLATE", "ZLEVEL=9", "INTERLEAVE=BAND"),
-  force.redo = F)
+  force.redo = TRUE)
 }
 \arguments{
 \item{landscape}{A spatial polygon of class "sf" (see package [sf]). Note: the object must be projected (i.e. has a coordinate reference system and must overlap the NLCD area)}
 
 \item{spatial}{keep the spatial data? Default = TRUE}
 
-\item{label}{A character string naming the study area.}
+\item{label}{A character string naming the study area. If no label supplied the function will use the name of the input landscape as the label.  A unique label for each input landscape is required if force.redo = FALSE.}
 
 \item{year}{An integer representing the year of desired NLCD product.
 Acceptable values are 2011 (default), 2006, and 2001.}

@@ -5,33 +5,50 @@
 #' The input polygon must be projected and must overlap a USA NLCD area
 #' Data are returned for years 2001, 2006, or 2011; The default is 2011
 #'
-#' @param landscape A spatial polygon of class "sf" (see package [sf]). Note: the object must be projected (i.e. has a coordinate reference system and must overlap the NLCD area)
-#' @param spatial keep the spatial data? Default = TRUE 
-#' @inheritParams FedData::get_nlcd
+#' @param landscape A spatial polygon of class "sf" (see package [sf]) to serve as a template for cropping the NLCD tile(s). Note: the object must be projected (i.e. has a coordinate reference system and must overlap the NLCD area).
+#' @param spatial keep the spatial data? Default = TRUE. 
+#' @param label A character string naming the study area. If no label is supplied the function will use the name of the input landscape as the label.  A unique label for each input landscape is required if force.redo = FALSE.
+#' @param year An integer representing the year of desired NLCD product. Acceptable values are 2011 (default), 2006, and 2001.
+#' @param dataset A character string representing type of the NLCD product. Acceptable values are landcover' (default), 'impervious', and 'canopy'.
+#' @param raw.dir	A character string indicating where raw downloaded files should be put. The directory will be created if missing. Defaults to './nlcd_data/raw/'.
+#' @param extraction.dir	A character string indicating where the extracted and cropped NLCD tile should be put. The directory will be created if missing. Defaults to './nlcd_data/cropped/'.
+#' @param raster.options	A vector of options for raster::writeRaster (see also FedData::get_nlcd).
+#' @param force.redo	If an extraction for this template and label already exists, should a new one be created?
 #'
 #' @export
 #' @examples
 #' gs_nlcd()
-gs_nlcd<-function(landscape, spatial = TRUE, label, year = 2011, dataset = "landcover",  
-                  raw.dir = "./RAW/NLCD", extraction.dir = paste0("./EXTRACTIONS/",
-                  "/NLCD"), raster.options = c("COMPRESS=DEFLATE", "ZLEVEL=9",
-                  "INTERLEAVE=BAND"), force.redo = F) {
+gs_nlcd<-function(landscape, spatial = TRUE, label = NA, year = 2011, dataset = "landcover",  
+                  raw.dir = "./nlcd_data/raw", extraction.dir = "./nlcd_data/cropped", 
+                  raster.options, force.redo = TRUE) {
   
-# define albers projection to use for analysis
-  crs_alb<-"+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0
-                +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
-
-# reproject landscape to the Albers projection used by NLCD
-landscape_alb<-sf::st_transform(landscape, crs_alb)  
-
+#check that landscape is an sf polygon object
+if (class(landscape)[1] != 'sf') stop("The landscape input must be an [sf] polygon object")
+  
+#check that the landscape is projected
+if(is.na(sf::st_crs(landscape)$epsg) & is.na(sf::st_crs(landscape)$proj4string)) stop("The landscape object is not projected; check [st_crs]")
+  
+# if is.na(label) set label to the name of the input landscape
+  if(is.na(label)) label <- deparse(substitute(landscape))
+  
+#save input crs for output
+input_crs<-sf::st_crs(landscape)
+  
+#reproject input landscape to albers (even if already in albers: just as fast)
+landscape<-sf::st_transform(landscape, crs_alb) #reproject to the Albers Equal Area Conic projection used by NLCD
+  
 # for the FedData package need to convert to [sp]
-landscape_alb<-sf::as_Spatial(sf::st_geometry(sf::st_zm(landscape_alb)))
+landscape_alb<-sf::as_Spatial(sf::st_geometry(sf::st_zm(landscape)))
 
 # Get the NLCD 
 nlcd <- FedData::get_nlcd(template = landscape_alb,
                           year = year,
-                          dataset = dataset,  # could also be "canopy" or "impervious"
-                          label = label)
+                          dataset = dataset,  
+                          label = label, 
+                          raw.dir = raw.dir,
+                          extraction.dir = extraction.dir,
+                          raster.options = raster.options,
+                          force.redo = force.redo)
 
 # to limit the NLCD data to the input landscape [mask] is used to assign the values outside the landscape to NA
 nlcd<-raster::mask(nlcd, landscape_alb)  
@@ -51,15 +68,6 @@ nlcd_freq$areaM2<-nlcd_freq$count * 30 * 30
 #add the label
 nlcd_freq$label<-label
 
-# add NLCD descriptors and legend info for dataset == "landcover"
-if(dataset == "landcover") { 
-  load(here::here('data/nlcd_landuse_info.rda'))                                ############NOTE: use package data later
-  nlcd_freq <- merge(nlcd_freq, nlcd_landuse_info, by = 'value', all.x = TRUE)
-    #add the 
-  nlcd@legend@values <- nlcd_landuse_info$value  
-  nlcd@legend@names <- nlcd_landuse_info$description
-}
-
 #prepare output list
 out<-list()
 
@@ -70,48 +78,84 @@ if(spatial) {
   out$nlcd <- nlcd
 } 
 
+# prepare output for for dataset == "canopy"
+if(dataset == "canopy") { 
+  tbl_nlcd <- data.frame(value = c(0:100), hex = nlcd@legend@colortable[1:101])
+  tbl_nlcd$description <- c("no canopy / missing value", rep("%impervious", 100))
+    
+  #add the legend info to raster
+  nlcd@legend@values <- tbl_nlcd$value 
+  nlcd@legend@names <- tbl_nlcd$description
+  nlcd@legend@color <- tbl_nlcd$hex
+    
+  # merge nlcd_freq & tbl_nlcd; rename nlcd_freq$value
+  nlcd_freq <- merge(nlcd_freq, tbl_nlcd, by = 'value', all.x = TRUE)
+  names(nlcd_freq)[1] <- 'percent_canopy'
+  
+  # calc total percents and areas for canopy and percent overlap
+  out$total_percent_canopy <- round(sum(nlcd_freq$percent_canopy * nlcd_freq$count) / sum(nlcd_freq$count), 1)
+  out$total_areaM2_canopy <- round(sum(0.01 * nlcd_freq$percent_canopy * nlcd_freq$areaM2), 1)
+  out$percent_overlap <- NA
+  out$warning <- "For the NLCD Canopy dataset missing values are scored as zeros so we cannot estimate percent_overlap; if you suspect that the input polygon might not be compeletly contained within the NLCD footprint rerun with dataset = 'impervious' or dataset = 'landcover'."
+}
+
+# prepare output for for dataset == "impervious"
+if(dataset == "impervious") { 
+  tbl_nlcd <- data.frame(value = c(0:100, 127), hex = nlcd@legend@colortable[c(1:101, 127)])
+  tbl_nlcd$description <- c(rep("%impervious", 101), "missing_value")
+  
+  #add the legend info to raster
+  nlcd@legend@values <- tbl_nlcd$value 
+  nlcd@legend@names <- tbl_nlcd$description
+  nlcd@legend@color <- tbl_nlcd$hex
+  
+  # merge nlcd_freq & tbl_nlcd; rename nlcd_freq$value
+  nlcd_freq <- merge(nlcd_freq, tbl_nlcd, by = 'value', all.x = TRUE)
+  names(nlcd_freq)[1] <- 'percent_impervious'
+  nlcd_freq$percent_impervious[nlcd_freq$percent_impervious ==  127] <- NA
+  
+  # calc total percents and areas for canopy and percent overlap
+  out$total_percent_impervious <- round(sum(nlcd_freq$percent_impervious * nlcd_freq$count) / sum(nlcd_freq$count), 1)
+  out$total_areaM2_impervious <- round(sum(0.01 * nlcd_freq$percent_impervious * nlcd_freq$areaM2), 1)
+  out$percent_overlap <- ifelse(any(is.na(nlcd_freq$percent_impervious)), 
+                                round(100 * sum(nlcd_freq$count[is.na(nlcd_freq$percent_impervious)]) / sum(nlcd_freq$count), 1),
+                                100)
+  if(out$percent_overlap !=100) out$warning <- "If percent_overlap not equal 100%; input landscape may be partially outside USA NLCD boundaries"
+}
+
+# prepare output for for dataset == "landcover"
+if(dataset == "landcover") { 
+  load(here::here('data/nlcd_landuse_info.rda')) 
+  
+  #add the legend info to raster
+  nlcd@legend@values <- nlcd_landuse_info$value 
+  nlcd@legend@names <- nlcd_landuse_info$description
+  nlcd@legend@color <- nlcd_landuse_info$hex
+  
+  # merge nlcd_freq & nlcd_landuse_info; rename nlcd_freq$value
+  nlcd_freq <- merge(nlcd_freq, nlcd_landuse_info, by = 'value', all.x = TRUE)
+  names(nlcd_freq)[1] <- 'landcover_class'
+  
+  # calc percent overlap
+  out$percent_overlap <- ifelse(min(nlcd_freq$landcover_class) == 0, 100 - round(100 * nlcd_freq$proportion[1], 1), 100)
+  if(out$percent_overlap !=100) out$warning <- "If percent_overlap not equal 100%; input landscape may be partially outside USA NLCD boundaries"
+}
+
 # add the nlcd_freq data to out
 out$nlcd_freq <- nlcd_freq
 
-# percent overlap between input landscape and census area
-
-# get the area of the landscape
-out$percent_overlap<-round(100 * sum(nlcd_freq$areaM2, na.rm = TRUE) / as.numeric(sf::st_area(out$landscape)), 1)
-
-#add overlap warning
-if(out$percent_overlap !=100) out$warning<-"percent_overlap not equal 100%; small differences may be due to intersecting landscape with NLCD raster; large difference suggest input landscape partially outside USA NLCD boundaries"
-
-
-
-###########dataset == 'landscape'
-
-# finally, add the labels
-lulc<-merge(nlcd_info,lulc,by.x='code',by.y='value',all.y=TRUE)
-
-
-
-#update legend info for nlcd landuse raster
-# slotNames(nlcd)
-# slotNames(nlcd@legend)
-load(here::here('data/nlcd_info.rda'))      #############NOTE: change this to package data
-nlcd@legend@values <- nlcd_info$code  
-nlcd@legend@names <- nlcd_info$label
-
-#format output
-#if spatial = TRUE return list with raster "nlcd" and d.f. "lulc"
-if(spatial) {
-  out<-list()
-  out$nlcd<-nlcd
-  out$landscape<-landscape
-  out$lulc<-lulc
-} else {
-  out<-lulc
-}
-
 return(out)
-}
+} 
 
-############TODO
-# determine percent overlap of landscape and NLCD data
-  # for the impervious this should be the NA values
-#  Fix the ?gs_nlcd add #' @inheritParams FedData::get_nlcd
+
+
+
+
+
+
+
+
+
+
+
+
