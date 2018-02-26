@@ -5,33 +5,28 @@
 \title{gs_nlcd}
 \usage{
 gs_nlcd(landscape, spatial = TRUE, label = NA, year = 2011,
-  dataset = "landcover", raw.dir = "./nlcd_data/raw",
-  extraction.dir = "./nlcd_data/clipped",
-  raster.options = c("COMPRESS=DEFLATE", "ZLEVEL=9", "INTERLEAVE=BAND"),
-  force.redo = TRUE)
+  dataset = "landcover", force.redo = TRUE, raw.dir = "./nlcd_data/raw",
+  extraction.dir = "./nlcd_data/cropped",
+  raster.options = c("COMPRESS=DEFLATE", "ZLEVEL=9"))
 }
 \arguments{
-\item{landscape}{A spatial polygon of class "sf" (see package [sf]). Note: the object must be projected (i.e. has a coordinate reference system and must overlap the NLCD area)}
+\item{landscape}{A spatial polygon of class "sf" (see package [sf]) to serve as a template for cropping the NLCD tile(s). Note: the object must be projected (i.e. has a coordinate reference system and must overlap the NLCD area).}
 
-\item{spatial}{keep the spatial data? Default = TRUE}
+\item{spatial}{keep the spatial data? Default = TRUE.}
 
-\item{label}{A character string naming the study area. If no label supplied the function will use the name of the input landscape as the label.  A unique label for each input landscape is required if force.redo = FALSE.}
+\item{label}{A character string naming the study area. If no label is supplied the function will use the name of the input landscape as the label.  A unique label for each input landscape is required if force.redo = FALSE.}
 
-\item{year}{An integer representing the year of desired NLCD product.
-Acceptable values are 2011 (default), 2006, and 2001.}
+\item{year}{An integer representing the year of desired NLCD product. Acceptable values are 2011 (default), 2006, and 2001.}
 
-\item{dataset}{A character string representing type of the NLCD product.
-Acceptable values are landcover' (default), 'impervious', and 'canopy'.}
-
-\item{raw.dir}{A character string indicating where raw downloaded files should be put.
-The directory will be created if missing. Defaults to './RAW/NED/'.}
-
-\item{extraction.dir}{A character string indicating where the extracted and cropped DEM should be put.
-The directory will be created if missing. Defaults to './EXTRACTIONS/NED/'.}
-
-\item{raster.options}{a vector of options for raster::writeRaster.}
+\item{dataset}{A character string representing type of the NLCD product. Acceptable values are landcover' (default), 'impervious', and 'canopy'. NOTE: canopy data not currently available for year = 2006 and sometimes year = 2001; appears to work for year = 2011.}
 
 \item{force.redo}{If an extraction for this template and label already exists, should a new one be created?}
+
+\item{raw.dir}{A character string indicating where raw downloaded files should be put. The directory will be created if missing. Defaults to './nlcd_data/raw/'.}
+
+\item{extraction.dir}{A character string indicating where the extracted and cropped NLCD tile should be put. The directory will be created if missing. Defaults to './nlcd_data/cropped/'.}
+
+\item{raster.options}{A vector of options for raster::writeRaster (see also FedData::get_nlcd).}
 }
 \description{
 This function takes an input landscape, a user-defined land area as an

@@ -9,7 +9,7 @@
 #' @param spatial keep the spatial data? Default = TRUE. 
 #' @param label A character string naming the study area. If no label is supplied the function will use the name of the input landscape as the label.  A unique label for each input landscape is required if force.redo = FALSE.
 #' @param year An integer representing the year of desired NLCD product. Acceptable values are 2011 (default), 2006, and 2001.
-#' @param dataset A character string representing type of the NLCD product. Acceptable values are landcover' (default), 'impervious', and 'canopy'.
+#' @param dataset A character string representing type of the NLCD product. Acceptable values are landcover' (default), 'impervious', and 'canopy'. NOTE: canopy data not currently available for year = 2006 and sometimes year = 2001; appears to work for year = 2011.
 #' @param raw.dir	A character string indicating where raw downloaded files should be put. The directory will be created if missing. Defaults to './nlcd_data/raw/'.
 #' @param extraction.dir	A character string indicating where the extracted and cropped NLCD tile should be put. The directory will be created if missing. Defaults to './nlcd_data/cropped/'.
 #' @param raster.options	A vector of options for raster::writeRaster (see also FedData::get_nlcd).
@@ -18,9 +18,9 @@
 #' @export
 #' @examples
 #' gs_nlcd()
-gs_nlcd<-function(landscape, spatial = TRUE, label = NA, year = 2011, dataset = "landcover",  
+gs_nlcd<-function(landscape, spatial = TRUE, label = NA, year = 2011, dataset = "landcover", force.redo = TRUE, 
                   raw.dir = "./nlcd_data/raw", extraction.dir = "./nlcd_data/cropped", 
-                  raster.options, force.redo = TRUE) {
+                  raster.options = c("COMPRESS=DEFLATE", "ZLEVEL=9")) {
   
 #check that landscape is an sf polygon object
 if (class(landscape)[1] != 'sf') stop("The landscape input must be an [sf] polygon object")
@@ -41,14 +41,15 @@ landscape<-sf::st_transform(landscape, crs_alb) #reproject to the Albers Equal A
 landscape_alb<-sf::as_Spatial(sf::st_geometry(sf::st_zm(landscape)))
 
 # Get the NLCD 
-nlcd <- FedData::get_nlcd(template = landscape_alb,
+nlcd <- tryCatch(FedData::get_nlcd(template = landscape_alb,
                           year = year,
                           dataset = dataset,  
                           label = label, 
                           raw.dir = raw.dir,
                           extraction.dir = extraction.dir,
                           raster.options = raster.options,
-                          force.redo = force.redo)
+                          force.redo = force.redo), 
+                            error = function(e) stop("No data returned by NLCD; Check that input landscape is correctly projected and intersects the coterminous United States; try again using a new, unique label."))
 
 # to limit the NLCD data to the input landscape [mask] is used to assign the values outside the landscape to NA
 nlcd<-raster::mask(nlcd, landscape_alb)  

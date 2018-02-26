@@ -22,12 +22,12 @@ merc<-"+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +
 buf20merc <- sf::st_transform(buf20, merc)
 devtools::use_data(buf20merc, compress = "bzip2", overwrite = TRUE)
 
-# select a border lake from Jeff's lake morpho and add a buffer-this lake & buffer is part in the USA and part in Canada
-border<-sf::st_read(dsn='Y:/data/lakeMorphometry/LakeMorphGdb.gdb', layer = "NorthEast01")
-border<-sf::st_as_sf(dplyr::filter(border, COMID==166196269))
-border<-sf::st_buffer(border, 5000)
-border<-sf::st_transform(border, crs_alb) #convert to albers
-devtools::use_data(border, compress = "bzip2", overwrite = TRUE)
+# # select a border lake from Jeff's lake morpho and add a buffer-this lake & buffer is part in the USA and part in Canada
+# border<-sf::st_read(dsn='Y:/data/lakeMorphometry/LakeMorphGdb.gdb', layer = "NorthEast01")
+# border<-sf::st_as_sf(dplyr::filter(border, COMID==166196269))
+# border<-sf::st_buffer(border, 5000)
+# border<-sf::st_transform(border, crs_alb) #convert to albers
+# devtools::use_data(border, compress = "bzip2", overwrite = TRUE)
 
 #  polygon out of range (in canada)
 oh_canada<-sf::st_read(here::here('temp/oh_canada.kml'))
