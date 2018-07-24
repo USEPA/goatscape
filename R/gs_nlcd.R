@@ -17,6 +17,8 @@
 #'
 #' @export
 #' @examples
+#' 
+#' 
 #' gs_nlcd()
 gs_nlcd<-function(landscape, spatial = TRUE, label = NA, year = 2011, dataset = "landcover", force.redo = TRUE, 
                   raw.dir = "./nlcd_data/raw", extraction.dir = "./nlcd_data/cropped", 
@@ -55,10 +57,10 @@ nlcd <- tryCatch(FedData::get_nlcd(template = landscape_alb,
 nlcd<-raster::mask(nlcd, landscape_alb)  
 
 # calculate areas and proportions of each NLCD class 
-nlcd_freq<-raster::freq(nlcd)
+nlcd_freq<-as.data.frame(raster::freq(nlcd))
 
-# remove the NA values and convert to df
-nlcd_freq<-as.data.frame(nlcd_freq[!is.na(nlcd_freq[,1]),])
+# remove na values
+nlcd_freq <- nlcd_freq[!is.na(nlcd_freq[,1]),]
 
 #calculate the proportions in each class
 nlcd_freq$proportion<-round(nlcd_freq$count/sum(nlcd_freq$count),3)

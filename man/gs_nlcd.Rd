@@ -35,5 +35,7 @@ The input polygon must be projected and must overlap a USA NLCD area
 Data are returned for years 2001, 2006, or 2011; The default is 2011
 }
 \examples{
+
+
 gs_nlcd()
 }
