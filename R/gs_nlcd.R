@@ -51,7 +51,7 @@ nlcd <- tryCatch(FedData::get_nlcd(template = landscape_alb,
                           extraction.dir = extraction.dir,
                           raster.options = raster.options,
                           force.redo = force.redo), 
-                            error = function(e) stop("No data returned by NLCD; Check that input landscape is correctly projected and intersects the coterminous United States; try again using a new, unique label."))
+                            error = function(e) stop("No data returned by NLCD; Check that input landscape is correctly projected and intersects the conterminous United States; try again using a new, unique label."))
 
 # to limit the NLCD data to the input landscape [mask] is used to assign the values outside the landscape to NA
 nlcd<-raster::mask(nlcd, landscape_alb)  
